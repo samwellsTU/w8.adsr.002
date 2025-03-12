@@ -1,3 +1,10 @@
+// ADSR Params
+
+let attack = 1; //attack time in seconds
+let decay = 1; //decay  time in seconds
+let sustain = 0.125; //sustain level in linear amplitude
+let release = 1; // release  time in seconds
+
 //----------WEB AUDIO CONTEXT-------------------
 /**
  * Creates a new Web Audio API context for handling audio processing.
@@ -18,7 +25,7 @@ let myOsc = null;
  * @type {GainNode}
  */
 let ampEnv = thisAudio.createGain();
-ampEnv.gain.value = 1.0;
+ampEnv.gain.value = 0.0;
 
 /**
  * Master gain node to control overall volume.
@@ -39,20 +46,38 @@ masterGain.connect(thisAudio.destination);
  * The oscillator is connected to the amplitude envelope gain node.
  */
 const playNote = function () {
-    myOsc = thisAudio.createOscillator();
-    myOsc.frequency.value = 220;
-    myOsc.type = "triangle";
-    myOsc.connect(ampEnv);
-    myOsc.start();
+  let now = thisAudio.currentTime;
+
+  myOsc = thisAudio.createOscillator();
+  myOsc.frequency.value = 220;
+  myOsc.type = "triangle";
+  myOsc.connect(ampEnv);
+  myOsc.start();
+
+  //loads correct starting value for ramp
+  ampEnv.gain.setValueAtTime(ampEnv.gain.value, now);
+
+  //attack
+  ampEnv.gain.linearRampToValueAtTime(1, now + attack);
+
+  //decay
+  ampEnv.gain.linearRampToValueAtTime(sustain, now + attack + decay);
 };
 
 /**
  * Stops and disconnects the active oscillator.
  */
 const stopNote = function () {
-    myOsc.stop();
-    myOsc.disconnect(ampEnv);
-    myOsc = null; // Reset to null after stopping
+  let now = thisAudio.currentTime;
+
+  //loads correct starting value for ramp
+  ampEnv.gain.setValueAtTime(ampEnv.gain.value, now);
+  //release
+  ampEnv.gain.linearRampToValueAtTime(0, now + release);
+
+  //   myOsc.stop();
+  //   myOsc.disconnect(ampEnv);
+  //   myOsc = null; // Reset to null after stopping
 };
 
 //---------EVENT LISTENERS--------------
