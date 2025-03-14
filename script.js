@@ -3,7 +3,7 @@
 let attack = 1; //attack time in seconds
 let decay = 1; //decay  time in seconds
 let sustain = 0.125; //sustain level in linear amplitude
-let release = 1; // release  time in seconds
+let release = 0.5; // release  time in seconds
 
 //----------WEB AUDIO CONTEXT-------------------
 /**
@@ -45,15 +45,24 @@ masterGain.connect(thisAudio.destination);
  * Creates and starts an oscillator with a triangle waveform at 220 Hz.
  * The oscillator is connected to the amplitude envelope gain node.
  */
-const playNote = function () {
+const playNote = function (freq) {
   let now = thisAudio.currentTime;
 
   myOsc = thisAudio.createOscillator();
-  myOsc.frequency.value = 220;
+
+  myOsc.onended = function () {
+    myOsc.disconnect(ampEnv);
+    myOsc = null;
+    console.log("Hey the oscillator stopped");
+  };
+
+  myOsc.frequency.value = freq;
   myOsc.type = "triangle";
   myOsc.connect(ampEnv);
   myOsc.start();
 
+  //clear ramps
+  ampEnv.gain.cancelScheduledValues(now);
   //loads correct starting value for ramp
   ampEnv.gain.setValueAtTime(ampEnv.gain.value, now);
 
@@ -69,15 +78,14 @@ const playNote = function () {
  */
 const stopNote = function () {
   let now = thisAudio.currentTime;
-
+  //clear ramps
+  ampEnv.gain.cancelScheduledValues(now);
   //loads correct starting value for ramp
   ampEnv.gain.setValueAtTime(ampEnv.gain.value, now);
   //release
   ampEnv.gain.linearRampToValueAtTime(0, now + release);
 
-  //   myOsc.stop();
-  //   myOsc.disconnect(ampEnv);
-  //   myOsc = null; // Reset to null after stopping
+  myOsc.stop(now + release + 0.01);
 };
 
 //---------EVENT LISTENERS--------------
@@ -97,3 +105,41 @@ let stopButton = document.getElementById("stop");
 // Add event listeners to buttons
 startButton.addEventListener("click", playNote);
 stopButton.addEventListener("click", stopNote);
+
+let isPlaying = false;
+
+document.addEventListener("keydown", function (event) {
+  if (!isPlaying) {
+    if (event.key == "a") {
+      playNote(261.36);
+      isPlaying = true;
+    } else if (event.key == "s") {
+      playNote(295.36);
+      isPlaying = true;
+    } else if (event.key == "d") {
+      playNote((261.63 * 5) / 4);
+      isPlaying = true;
+    } else if (event.key == "w") {
+      playNote((261.63 * 16) / 15);
+      isPlaying = true;
+    }
+  }
+});
+
+document.addEventListener("keyup", function (event) {
+  if (isPlaying) {
+    if (event.key == "a") {
+      stopNote();
+      isPlaying = false;
+    } else if (event.key == "s") {
+      stopNote();
+      isPlaying = false;
+    } else if (event.key == "d") {
+      stopNote();
+      isPlaying = false;
+    } else if (event.key == "w") {
+      stopNote();
+      isPlaying = false;
+    }
+  }
+});
